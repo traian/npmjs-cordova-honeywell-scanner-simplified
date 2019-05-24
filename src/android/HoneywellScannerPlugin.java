@@ -19,6 +19,7 @@ import com.honeywell.aidc.BarcodeReadEvent;
 import com.honeywell.aidc.BarcodeReader;
 import com.honeywell.aidc.ScannerUnavailableException;
 import com.honeywell.aidc.ScannerNotClaimedException;
+import com.honeywell.aidc.UnsupportedPropertyException;
 
 public class HoneywellScannerPlugin extends CordovaPlugin implements BarcodeReader.BarcodeListener {
     private static final String TAG = "HoneywellScanner";
@@ -38,6 +39,12 @@ public class HoneywellScannerPlugin extends CordovaPlugin implements BarcodeRead
                 manager = aidcManager;
                 barcodeReader = manager.createBarcodeReader();
                 if (barcodeReader != null) {
+                    try {
+                        barcodeReader.setProperty(
+                                BarcodeReader.PROPERTY_EAN_13_CHECK_DIGIT_TRANSMIT_ENABLED, true);
+                    } catch (UnsupportedPropertyException e) {
+                        e.printStackTrace();
+                    }
                     barcodeReader.addBarcodeListener(HoneywellScannerPlugin.this);
                     try {
                         barcodeReader.claim();
@@ -61,7 +68,7 @@ public class HoneywellScannerPlugin extends CordovaPlugin implements BarcodeRead
                     NotifyError("ScannerNotClaimedException");
                 } catch (ScannerUnavailableException e) {
                     e.printStackTrace();
-                 NotifyError("ScannerUnavailableException");
+                    NotifyError("ScannerUnavailableException");
                 }
             }
         } else if (action.equals("softwareTriggerStop")) {
@@ -127,8 +134,43 @@ public class HoneywellScannerPlugin extends CordovaPlugin implements BarcodeRead
                      NotifyError("ScannerUnavailableException2");
                 }
             }
-         }
+        } else if (action.equals("setConfig")) {
+            if (barcodeReader != null) {
+                if (args.isNull(0)) {
+                    callbackContext.error("Config parameter is empty");
+                    return true;
+                }
+                if (args.isNull(1)) {
+                    callbackContext.error("Value parameter is empty");
+                    return true;
+                }
+                final String config = args.getString(0);
+                final Object val = args.get(1);
+                try {
+                    setConfig(config, val);
+                    callbackContext.success();
+                } catch (UnsupportedPropertyException e) {
+                    e.printStackTrace();
+                    callbackContext.error("Config not supported");
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                    callbackContext.error(e.getMessage());
+                }
+            }
+        }
         return true;
+    }
+
+    private void setConfig(final String config, final Object val) throws UnsupportedPropertyException {
+        if (val instanceof String) {
+            barcodeReader.setProperty(config, (String) val);
+        } else if (val instanceof Integer) {
+           barcodeReader.setProperty(config, (Integer) val);
+        } else if (val instanceof  Boolean) {
+            barcodeReader.setProperty(config, (Boolean) val);
+        } else {
+            throw new IllegalArgumentException("Config value type not supported");
+        }
     }
 
     @Override

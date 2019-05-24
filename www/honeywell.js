@@ -24,6 +24,9 @@ var honeywell = {
     },
     claim: function () { // DEPRECATION WARNING: This will be removed in the next major release, use nativeRelease
         return execute(null, null, 'HoneywellScannerPlugin', 'claim', []);
+    },
+    setConfig: function(cb, config, val) {
+        return execute(cb, cb, 'HoneywellScannerPlugin', 'setConfig', [config, val]);
     }
 };
 
